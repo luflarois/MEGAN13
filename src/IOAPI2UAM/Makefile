@@ -1,0 +1,31 @@
+PROG =	../../bin/ioapi2uam
+
+SRCS =	FDESC3.f90 ioapi2uam.f90 IODECL3.f90 PARMS3.f90
+
+OBJS =	FDESC3.o ioapi2uam.o IODECL3.o PARMS3.o
+
+LIBS =	-L/stornext/home/luiz.flavio/web31/tupan_pgi -lioapi
+
+CC = ftn
+CFLAGS = -O
+FC = ftn
+FFLAGS = -O3
+F90 = ftn
+F90FLAGS = -O3
+LDFLAGS = -s
+
+all: $(PROG)
+
+$(PROG): $(OBJS)
+	$(F90) $(LDFLAGS) -o $@ $(OBJS) $(LIBS)
+
+clean:
+	rm -f $(PROG) $(OBJS) *.mod
+
+.SUFFIXES: $(SUFFIXES) .f90
+
+.f90.o:
+	$(F90) $(F90FLAGS) -c $<
+
+FDESC3.o: PARMS3.o
+ioapi2uam.o: FDESC3.o IODECL3.o PARMS3.o

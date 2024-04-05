@@ -1,0 +1,167 @@
+
+SUBROUTINE cnvt_lai(gdnam,laitxtf,lais46)
+!***********************************************************************
+!  This subroutine converts LAI txt to LAI IOAPI
+!
+!  Called by TXT2IOAPI
+!
+!  Call:
+!     PARSLINE
+!     CHECKMEM
+!
+!  Created by Tan  07/07/2011 for MEGAN v2.10
+!
+!  History:
+!***********************************************************************
+
+USE PARMS3   !  I/O API parameters
+USE IODECL3  !  I/O API function declarations
+USE FDESC3   !  I/O API file description data structures
+USE LAI_MGN  !  LAI
+
+IMPLICIT NONE
+
+!...........   EXTERNAL FUNCTIONS and their descriptions:
+INTEGER :: promptffile, str2int
+REAL :: str2real
+LOGICAL :: dscgrid
+INTEGER :: index1
+EXTERNAL     promptffile, dscgrid, str2int, str2real, index1
+
+!.........  LOCAL VARIABLES and their descriptions:
+INTEGER :: ios            ! i/o status
+INTEGER :: iline          ! current line
+INTEGER :: adev           ! unit no. for input data file
+INTEGER :: i, j, s, n     ! Counters
+INTEGER :: itime          ! Counters
+INTEGER :: idate          ! Counters
+CHARACTER (LEN=16) :: cname        ! Coord name
+CHARACTER (LEN=1000) line     ! input ine buffer
+CHARACTER (LEN=256) :: mesg        ! message buffer
+INTEGER :: cid, inx, iny  ! Input grid x and y
+
+CHARACTER (LEN=16) :: laitxtf
+CHARACTER (LEN=16) :: lais46
+CHARACTER (LEN=16) :: gdnam
+
+! CID, I, J, 46 LAIs
+INTEGER,PARAMETER :: mxtcol = 49      ! Columns in an input line
+CHARACTER (LEN=30) :: segment( mxtcol )     ! Input line fields
+
+INTEGER,PARAMETER :: nfld  = mxtcol-3 ! Number of output variables
+INTEGER :: xref(nfld)
+INTEGER :: nstep = nfld
+INTEGER,PARAMETER :: nvars = 1        ! Number of output variables
+
+REAL,allocatable :: ibuff( :, :, : )  ! input, output buffer
+
+CHARACTER (LEN=16) :: progname = 'CNVT_LAI'
+
+!***********************************************************************
+!... Begin program
+
+!... Get output file grid parameters
+gdnam3d = gdnam
+IF( .NOT. dscgrid( gdnam3d, cname, gdtyp3d,  &
+      p_alp3d, p_bet3d, p_gam3d, xcent3d, ycent3d,  &
+      xorig3d, yorig3d, xcell3d, ycell3d, ncols3d, nrows3d, nthik3d ) ) THEN
+  mesg = 'Could not get grid description.'
+  CALL m3exit ( progname, 0, 0, mesg, 2 )
+END IF
+
+!... Allocate memory
+allocate ( ibuff( ncols3d, nrows3d, nstep ), stat = ios )
+CALL checkmem ( ios, 'IBUFF', progname )
+ibuff = 0.
+
+!... Get input file unit
+mesg = 'Enter logical name of LAI data file.'
+adev = promptffile( mesg, .true., .true., laitxtf, progname )
+IF( adev < 0 ) THEN
+  mesg = 'Error opening input LAI file.'
+  CALL m3exit ( progname, 0, 0, mesg, 2 )
+END IF
+
+!... Read TXT input file
+iline = 0
+DO
+  READ( adev, 1000, IOSTAT = ios ) line
+  iline = iline + 1
+  IF( ios < 0 ) EXIT       ! End of file, exit loop
+  IF( line == ' ' ) cycle  ! Skip blank line
+  IF( ios > 0 ) THEN
+    WRITE( mesg, 1010 ) 'I/O error', ios, 'reading input file at line', iline
+    CALL m3exit( progname, 0, 0, mesg, 2 )
+  END IF
+  
+  CALL parsline( line, mxtcol, segment )  ! break lines into segments
+  IF ( iline == 1 ) THEN
+    DO s = 1 , nfld
+      mesg = segment( s + 3 )
+      CALL upcase( mesg )  ! to all caps
+      IF ( index1(trim( mesg ),n_mgn_lai ,mgn_lai) /= 0) THEN
+        n = index1(trim( mesg ),n_mgn_lai ,mgn_lai)
+        xref( s ) = n
+      ELSE
+        print *,mesg//' is not valid'
+        STOP 
+      END IF
+      PRINT*,'READ ',mgn_lai(n)
+    END DO
+    cycle  ! go back to read 2nd line
+  END IF
+  
+  cid = str2int( segment(1) )   ! convert character to integer
+  inx = str2int( segment(2) )   ! convert character to integer
+  iny = str2int( segment(3) )   ! convert character to integer
+  DO s = 1, nfld
+    ibuff(inx,iny,xref(s)) = str2real( segment( 3+s ) )  ! convert char to real
+  END DO
+END DO
+
+WRITE( mesg, 1010 ) 'Total number of input lines read:',iline
+CALL m3mesg( mesg )
+
+!... Setup additional outfile parameters and open outfile
+ftype3d = grdded3
+nvars3d = nvars
+!... Set VNAME3D and UNITS3D
+DO n = 1,nvars
+  vname3d( n ) = 'LAIS'
+  units3d( n ) = 'nondimension'
+END DO
+vtype3d(1:nvars) = m3real
+tstep3d = 10000
+mxrec3d = nstep            ! 46 LAI
+nlays3d = 1
+CALL nameval ( laitxtf, mesg )  ! get input file name
+fdesc3d( 1 ) = 'Converted from MEGAN input text file: '
+fdesc3d( 2 ) = trim(mesg)
+IF ( .NOT. open3( lais46, fscrea3, progname ) ) THEN
+  mesg = 'Could not open file "'//trim(lais46)//'" for output'
+  CALL m3exit( progname, 0, 0, mesg, 2 )
+END IF
+
+!... Write output
+idate = 0
+itime = 0
+DO s = 1, nstep
+  PRINT*,'Min value for '//mgn_lai(s)//':',minval(ibuff(:,:,s))
+  PRINT*,'Max value for '//mgn_lai(s)//':',maxval(ibuff(:,:,s))
+  IF ( .NOT. write3(lais46,allvar3,idate,itime,ibuff(:,:,s))) THEN
+    mesg = 'Error writing to  file "'//trim(lais46)//'"'
+    CALL m3exit(progname,0,0,mesg,2)
+  END IF
+  CALL nextime( 0 , itime, tstep3d )
+  IF ( itime == 0 ) idate = 1
+END DO
+
+IF ( close3(lais46) ) THEN
+  CALL m3mesg( 'Closing LAI IOAPI file')
+END IF
+CLOSE(adev)
+
+1000  FORMAT( 40A )
+1010  FORMAT( 40( a, :, i8, :, 1X ) )
+
+END SUBROUTINE

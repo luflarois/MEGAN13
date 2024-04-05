@@ -1,0 +1,40 @@
+                                                                     
+     This program uses the EPA-AREAL/MCNC-EnvPgms/BAMS Models-3      
+     I/O Applications Programming Interface, [I/O API] which is      
+     built on top of the netCDF I/O library (Copyright 1993, 1996    
+     University Corporation for Atmospheric Research/Unidata         
+     Program) and the PVM parallel-programming library (from         
+     Oak Ridge National Laboratory).  Copyright (C) 1992-2002 MCNC   
+     and Carlie J. Coats, Jr., and 2003-2012 Baron Advanced          
+     Meteorological Systems, LLC and released under the GNU LGPL     
+     License, version 2.1.  See URL                                  
+                                                                     
+         http://www.baronams.com/products/ioapi/LGPL.txt             
+                                                                     
+     for conditions of use.                                          
+                                                                     
+     Library release tag: $JDate: 2012262 $                          
+                                                                     
+     $Id: @(#) ioapi library version 3.1 $
+     Version with PARMS3.EXT/PARAMETER::MXVARS3= 2048
+     netCDF version 4.2 of Jun 15 2012 14:14:01 $
+      
+      
+     Missing environment variable EXECUTION_ID
+     Value for ONLN_DT:  Y returning TRUE
+     Value for ONLN_DS:  Y returning TRUE
+     Value for GDNAM3D:  'USA36km'
+
+     File "GRIDDESC" opened for input on unit:  99
+     /stornext/home/luiz.flavio/MEGAN/work/GRIDDESC
+
+        Checking up files       0        0        0
+     PFTS16          :/stornext/home/luiz.flavio/MEGAN/Input/MAP/PFTS16.USA36.ncf
+     
+     >>--->> WARNING in subroutine OPEN3
+     File not available.
+     
+     
+     *** ERROR ABORT in subroutine EMPROC
+     Could not open file /stornext/home/luiz.flavio/MEGAN/Input/MAP/PFTS16.USA36.ncf
+     
